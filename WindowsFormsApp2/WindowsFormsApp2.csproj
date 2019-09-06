@@ -7,11 +7,27 @@
     <ProjectGuid>{D8D4FD86-CC90-4228-9134-A65B0E66721D}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>WindowsFormsApp2</RootNamespace>
-    <AssemblyName>WindowsFormsApp2</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <AssemblyName>notGram</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,6 +38,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -31,20 +48,26 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Второй-вариант_-иконка-2.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="aLib">
+      <HintPath>..\..\..\..\..\Desktop\Лицензирование ПО (Часть 1)\PrivateApplication\PrivateApplication\bin\Debug\aLib.dll</HintPath>
+    </Reference>
     <Reference Include="InstaSharper, Version=1.4.82.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\InstaSharper.1.4.82\lib\net472\InstaSharper.dll</HintPath>
     </Reference>
-    <Reference Include="MetroFramework, Version=1.2.0.3, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
-      <HintPath>..\packages\MetroFramework.RunTime.1.2.0.3\lib\net40-Client\MetroFramework.dll</HintPath>
+    <Reference Include="MetroFramework, Version=1.4.0.0, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
+      <HintPath>..\packages\MetroModernUI.1.4.0.0\lib\net\MetroFramework.dll</HintPath>
     </Reference>
-    <Reference Include="MetroFramework.Design, Version=1.2.0.3, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
-      <HintPath>..\packages\MetroFramework.Design.1.2.0.3\lib\net40\MetroFramework.Design.dll</HintPath>
-      <Private>False</Private>
+    <Reference Include="MetroFramework.Design, Version=1.4.0.0, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
+      <HintPath>..\packages\MetroModernUI.1.4.0.0\lib\net\MetroFramework.Design.dll</HintPath>
     </Reference>
-    <Reference Include="MetroFramework.Fonts, Version=1.2.0.3, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
-      <HintPath>..\packages\MetroFramework.Fonts.1.2.0.3\lib\net40\MetroFramework.Fonts.dll</HintPath>
+    <Reference Include="MetroFramework.Fonts, Version=1.4.0.0, Culture=neutral, PublicKeyToken=5f91a84759bf584a, processorArchitecture=MSIL">
+      <HintPath>..\packages\MetroModernUI.1.4.0.0\lib\net\MetroFramework.Fonts.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
@@ -63,11 +86,64 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AccountInfo.cs" />
+    <Compile Include="Audience\enums.cs" />
+    <Compile Include="Audience\settingAudience.cs" />
+    <Compile Include="Audience\Statistics\InfoStatisticsGrid.cs" />
+    <Compile Include="Audience\Statistics\UpdateGridAudience.cs" />
+    <Compile Include="Audience\Task\AudienceConvert.cs" />
+    <Compile Include="Audience\Task\AudienceDeleteDuplicatesTask.cs" />
+    <Compile Include="Audience\Task\AudienceFilterTask.cs" />
+    <Compile Include="Audience\Task\AudienceHashTagsSbor.cs" />
+    <Compile Include="Audience\Task\AudienceSborLogin.cs" />
+    <Compile Include="Audience\Task\IAudienceTask.cs" />
     <Compile Include="AuthForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="AuthForm.Designer.cs">
       <DependentUpon>AuthForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Defender Task\DefenderTask.cs" />
+    <Compile Include="Defender Task\IDefender.cs" />
+    <Compile Include="Defender Task\InfoDefenderTask.cs" />
+    <Compile Include="Defender Task\InfoGridTaskPlans.cs" />
+    <Compile Include="Defender Task\UpdateGridTaskPlans.cs" />
+    <Compile Include="Deferred Posting\AutoPostUploadHistory.cs" />
+    <Compile Include="Deferred Posting\AutoPostUploadPhoto.cs" />
+    <Compile Include="Deferred Posting\AutoPostUploadVideo.cs" />
+    <Compile Include="Deferred Posting\InfoGridAutopost.cs" />
+    <Compile Include="Deferred Posting\IPost.cs" />
+    <Compile Include="Deferred Posting\Post.cs" />
+    <Compile Include="Deferred Posting\UpdateGridAutopost.cs" />
+    <Compile Include="Forms\AddPlansForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\AddPlansForm.Designer.cs">
+      <DependentUpon>AddPlansForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\AddPostForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\AddPostForm.Designer.cs">
+      <DependentUpon>AddPostForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\HandleChallengeForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\HandleChallengeForm.Designer.cs">
+      <DependentUpon>HandleChallengeForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\TwoFactorForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\TwoFactorForm.Designer.cs">
+      <DependentUpon>TwoFactorForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="License.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="License.Designer.cs">
+      <DependentUpon>License.cs</DependentUpon>
     </Compile>
     <Compile Include="MainForm.cs">
       <SubType>Form</SubType>
@@ -76,61 +152,53 @@
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
     <Compile Include="MyEventMessage.cs" />
+    <Compile Include="OptionsTask.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="OptionsTask.Designer.cs">
+      <DependentUpon>OptionsTask.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SettingClearBotsForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingClearBotsForm.Designer.cs">
-      <DependentUpon>SettingClearBotsForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="SettingMassComment.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingMassComment.Designer.cs">
-      <DependentUpon>SettingMassComment.cs</DependentUpon>
-    </Compile>
-    <Compile Include="SettingMassDirect.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingMassDirect.Designer.cs">
-      <DependentUpon>SettingMassDirect.cs</DependentUpon>
-    </Compile>
-    <Compile Include="SettingMassLikeForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingMassLikeForm.Designer.cs">
-      <DependentUpon>SettingMassLikeForm.cs</DependentUpon>
-    </Compile>
+    <Compile Include="SettingsTask\ISetting.cs" />
+    <Compile Include="SettingsTask\Setting.cs" />
     <Compile Include="SettingsTask\SettingTaskClearBots.cs" />
     <Compile Include="SettingsTask\SettingTaskComment.cs" />
     <Compile Include="SettingsTask\SettingTaskMassDirect.cs" />
     <Compile Include="SettingsTask\SettingTaskSubscribe.cs" />
     <Compile Include="SettingsTask\SettingTaskToList.cs" />
     <Compile Include="SettingsTask\SettingTaskUnSubscribe.cs" />
-    <Compile Include="SettingSubscribeForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingSubscribeForm.Designer.cs">
-      <DependentUpon>SettingSubscribeForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="SettingUnSubscribeForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="SettingUnSubscribeForm.Designer.cs">
-      <DependentUpon>SettingUnSubscribeForm.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Task\TaskClearOfBots.cs" />
-    <Compile Include="Task\TaskLikingToList.cs" />
+    <Compile Include="Task\ITask.cs" />
+    <Compile Include="Task\TaskClearBots.cs" />
     <Compile Include="Task\TaskMassComment.cs" />
     <Compile Include="Task\TaskMassDirect.cs" />
-    <Compile Include="Task\TaskMassSubscribe.cs" />
-    <Compile Include="Task\TaskMassUnSubscribe.cs" />
+    <Compile Include="Task\TaskMasslike.cs" />
+    <Compile Include="Task\TaskSubscribe.cs" />
+    <Compile Include="Task\TaskUnSubscribe.cs" />
+    <Compile Include="UpdateGridEvent.cs" />
     <EmbeddedResource Include="AuthForm.resx">
       <DependentUpon>AuthForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Forms\AddPlansForm.resx">
+      <DependentUpon>AddPlansForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\AddPostForm.resx">
+      <DependentUpon>AddPostForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\HandleChallengeForm.resx">
+      <DependentUpon>HandleChallengeForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\TwoFactorForm.resx">
+      <DependentUpon>TwoFactorForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="License.resx">
+      <DependentUpon>License.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OptionsTask.resx">
+      <DependentUpon>OptionsTask.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -140,26 +208,13 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="SettingClearBotsForm.resx">
-      <DependentUpon>SettingClearBotsForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SettingMassComment.resx">
-      <DependentUpon>SettingMassComment.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SettingMassDirect.resx">
-      <DependentUpon>SettingMassDirect.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SettingMassLikeForm.resx">
-      <DependentUpon>SettingMassLikeForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SettingSubscribeForm.resx">
-      <DependentUpon>SettingSubscribeForm.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="SettingUnSubscribeForm.resx">
-      <DependentUpon>SettingUnSubscribeForm.cs</DependentUpon>
-    </EmbeddedResource>
     <None Include="packages.config" />
+    <None Include="Properties\DataSources\WindowsFormsApp2.Audience.Statistics.InfoStatisticsGrid.datasource" />
+    <None Include="Properties\DataSources\WindowsFormsApp2.Defender_Task.InfoGridTaskPlans.datasource" />
+    <None Include="Properties\DataSources\WindowsFormsApp2.Deferred_Posting.InfoGridAutopost.datasource" />
+    <None Include="Properties\DataSources\WindowsFormsApp2.Deferred_Posting.UpdateGridAutopost.datasource" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -175,6 +230,35 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="MetroFramework.txt" />
+    <None Include="Resources\key-icon.png" />
+    <None Include="Resources\iconfinder_Shield_16x16_132625.png" />
+    <None Include="Resources\plus-icon-91546 %281%29.png" />
+    <Content Include="Второй-вариант_-иконка-2.ico" />
+    <Content Include="иконка.ico" />
+    <None Include="Resources\user.png" />
+    <None Include="Resources\connect-icon %281%29.png" />
+    <None Include="Resources\iconfinder_Unlock_132679.png" />
+    <None Include="Resources\iconfinder_Person_132730.png" />
+    <None Include="Resources\lockk.png" />
+    <None Include="Resources\412.png" />
+    <None Include="Resources\user-shape_icon-icons.com_72487.png" />
+    <None Include="Resources\32.png" />
+    <None Include="Resources\name_user_3716.png" />
+    <None Include="Resources\round-account-button-with-user-inside_icon-icons.com_72596.png" />
+    <None Include="Resources\man-user.png" />
   </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 и x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

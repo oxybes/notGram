@@ -1,183 +1,267 @@
-﻿using InstaBot.SettingsTask;
+﻿using InstaBot;
+using InstaBot.SettingsTask;
+using InstaSharper.API;
 using InstaSharper.Classes;
 using InstaSharper.Classes.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
-namespace InstaBot.Task
+namespace WindowsFormsApp2.Task
 {
-    class TaskMassComment
+    class TaskMassComment:ITask
     {
-        InstaSharper.API.IInstaApi api;
-        SettingTaskComment setting;
-        List<IResult<InstaUserInfo>> userInfo = new List<IResult<InstaUserInfo>>();
+        static public event EventHandler<MyEventMessage> EventFromMyClass;
+        static public event EventHandler<UpdateGridEvent> EventUpdateGrid;
 
-        List<long> usersID;
-        List<long> usersIDcopy;
-        IResult<InstaMediaList> media;
-        List<InstaMedia> mediaList;
-        Random rnd;
+        private IInstaApi api;
+        private SettingTaskComment setting;
+        private ManualResetEvent ew;
+        private CancellationTokenSource _source;
+        private Timer timer;
+        private List<long> usersID;
+        private List<long> usersIDcopy;
+        private Random rnd;
+        private int CountComment;
+        private int CountPause;
+        private IResult<InstaCurrentUser> userInfoLog;
+        public bool Stat { get; private set; } = false;
 
-        bool pause;
-        bool cancel;
-
-        public int CountComment { get; private set; }
-
-        public event EventHandler<MyEventMessage> EventFromMyClass;
-
-
-        public TaskMassComment(InstaSharper.API.IInstaApi api, SettingTaskComment setting)
+        public TaskMassComment(IInstaApi api, SettingTaskComment setting)
         {
             this.api = api;
             this.setting = setting;
-            usersID = new List<long>();
-            usersIDcopy = new List<long>();
-            CountComment = 0;
-            rnd = new Random();
-            pause = false;
-            cancel = false;
+            ew = new ManualResetEvent(true);
+
         }
 
         public void Start()
         {
-            EventFromMyClass(this, new MyEventMessage("Комментирование запущено\n"));
+            if (_source == null)
+            {
+                rnd = new Random();
+                CountComment = 0;
+                CountPause = 0;
+                usersID = new List<long>();
+                usersIDcopy = new List<long>();
+                try
+                {
+                    ThreadPool.QueueUserWorkItem(new WaitCallback((s) => { MassComment().GetAwaiter().GetResult(); }));
+                }
+                catch
+                {
+                    EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}: - : - : - :" +
+                                                              $"Забанен"));
+                }
+            }
+            else
+            {
+                EventFromMyClass(this,
+                    new MyEventMessage(
+                        $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Продолжаю работу."));
+                ew.Set();
+            }
+        }
+
+        async System.Threading.Tasks.Task MassComment()
+        {
+            Stat = true;
+            userInfoLog = await api.GetCurrentUserAsync();
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Комментирование запущено"));
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Загружаю базу."));
             try
             {
                 string[] stringID = System.IO.File.ReadAllLines(setting.FileNameBaseId);
                 foreach (string str in stringID)
                 {
-                    usersID.Add(Convert.ToInt64(str));
-                    usersID.Add(Convert.ToInt64(str));
+                    try
+                    {
+                        usersID.Add(Convert.ToInt64(str));
+                        usersIDcopy.Add(Convert.ToInt64(str));
+                    }
+                    catch { continue; }
                 }
             }
             catch (Exception e)
             {
-                EventFromMyClass(this, new MyEventMessage($"ОШИБКА: {e.Message} {e.TargetSite} {DateTime.Now}\n"));
+                EventFromMyClass(null,
+                    new MyEventMessage(
+                        $"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] ОШИБКА: {e.Message}"));
             }
-            MassComments();
-        }
 
-        async void MassComments()
-        {
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Выполняется"));
+
             foreach (long id in usersID)
             {
                 try
                 {
-                    if(cancel)
-                        return;
-                    while (pause)
-                    {
-                        Thread.Sleep(1000);
-                    }
+                    if (_source == null || _source.IsCancellationRequested)
+                        break;
 
                     var infoUser = await api.GetUserInfoByIdAsync(id);
 
-                    media = await api.GetUserMediaAsync(
+                    int pages = setting.CountCommnetUnderPublish;
+                    Thread.Sleep(100);
+                    var media = await api.GetUserMediaAsync(
                             infoUser.Value.Username,
-                            PaginationParameters.MaxPagesToLoad(getMaxPage(setting.CountPublishComment))); //Учет загруки страниц
-                    mediaList = media.Value.ToList();
+                            PaginationParameters.MaxPagesToLoad(pages % 18 == 0 ? pages : pages + 1)); //Учет загруки страниц
+                    var mediaList = media.Value.ToList();
 
                     for (int i = 0; i < setting.CountPublishComment; i++)
                     {
+                        if (_source == null || _source.IsCancellationRequested)
+                            break;
+
                         for (int y = 0; y < setting.CountCommnetUnderPublish; y++)
                         {
-                            
-                            int random = rnd.Next(0, setting.Message.Length);
-                            await api.CommentMediaAsync(mediaList[i].Pk, setting.Message[random]);
-                            CountComment++;
-                            EventFromMyClass(this, new MyEventMessage($"{DateTime.Now.ToString("HH:mm:ss")}, Прокомментировал запись: {infoUser.Value.Username}, количество комментариев: {CountComment}"));
+                            if (_source == null || _source.IsCancellationRequested)
+                                break;
 
-                            DelayUser();
+                            int random = rnd.Next(0, setting.Message.Length);
+                            await api.CommentMediaAsync(mediaList[0].Pk, setting.Message[random]);
+                            CountComment++;
+                            CountPause++;
+                            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Прокомментировал запись пользователя: {infoUser.Value.Username}. Количество комментариев: {CountComment}"));
+                            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                                      $"Выполняется"));
+                            if (y != setting.CountCommnetUnderPublish - 1)
+                            {
+                                int randomDelayUser = rnd.Next(setting.DelayOneUserMin, setting.DelayOneUserMax + 1);
+                                EventFromMyClass(this,
+                                    new MyEventMessage(
+                                        $"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Задержка на пользователя {randomDelayUser} сек"));
+                                if (timer != null)
+                                    timer.Dispose();
+                                timer = new Timer(CancelDelay, null, 1000 * randomDelayUser, Timeout.Infinite);
+                                ew.Reset();
+                                ew.WaitOne();
+                            } //Учет задержки на пользователя      
                         }
                     }
 
-                    if(setting.ChekedDeleteBase)
+                    if (setting.ChekedDeleteBase)
                     {
                         usersIDcopy.Remove(id);
                     }
 
-                    Delay();
 
-                    if(setting.CommentCountMax <= CountComment) //Проверка лимита комментариев
+                    Delay(); //Задержка в сек.
+
+                    if (setting.CommentCountMax <= CountComment) //Проверка лимита комментариев
                     {
-                        EventFromMyClass(this, new MyEventMessage("Превышено максимальное количество комментариев. Завершение задачи."));
+                        EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Превышено максимальное количество комментариев. Завершение задачи."));
+                        Save();
+                        EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                                  $"Завершено"));
                         return;
                     }
 
-                    CheckedPause();                 
+                    if (setting.CheckedPause) //Учет паузы
+                    {
+                        if (setting.PauseLimit <= CountPause)
+                        {
+                            CountPause = 0;
+                            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Пауза на " + setting.PauseTime + " минут"));
+                            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                                      $"Пауза"));
+                            if (timer != null)
+                                timer.Dispose();
+                            timer = new Timer(CancelDelay, null, 1000 * setting.PauseTime, Timeout.Infinite);
+                            ew.Reset();
+                            ew.WaitOne();
+                        }
+                    }
                 }
 
                 catch (Exception e)
                 {
-                    EventFromMyClass(this, new MyEventMessage($"ОШИБКА : {e.Message}"));
+                    EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] ОШИБКА: {e.Message}"));
                     continue;
                 }
             }
-            EventFromMyClass(this, new MyEventMessage($"{DateTime.Now.ToString("HH:mm:ss")}, Выполнено"));
-        }
 
-        int getMaxPage(int x) //Максимальная страница для загрузки записей в лист, 1 сраница - 18 записей
-        {
-            if (x % 18 == 0)
-                return x;
-            else
-                return x + 1;
+            Stat = false;
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Выполнено"));
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Завершено"));
+            Save();
+            
         }
-        void Delay()
+        public async void Pause()
         {
-            int randomDelay = rnd.Next(setting.DelayMin, setting.DelayMax + 1);
-            EventFromMyClass(this, new MyEventMessage($"Задержка на {randomDelay} сек"));
-            Thread.Sleep(1000 * randomDelay); //Задержка в сек.
-        }
-        void DelayUser()
-        {
-            int randomDelayUser = rnd.Next(setting.DelayOneUserMin, setting.DelayOneUserMax + 1);
-            EventFromMyClass(this, new MyEventMessage($"Задержка на {randomDelayUser} сек"));
-            Thread.Sleep(1000 * randomDelayUser); //Учет задержки на пользователя      
-        }
-        void CheckedPause()
-        {
-            if (setting.CheckedPause) //Учет паузы
-            {
-                if (setting.PauseLimit <= CountComment)
-                {
-                    EventFromMyClass(this, new MyEventMessage("Пауза на " + setting.PauseTime + "минут"));
-                    Thread.Sleep(1000 * setting.PauseTime);
-                }
-            }
-        }
-
-        public void Pause()
-        {
-            EventFromMyClass(this, new MyEventMessage($"...Ставлю на паузу..."));
-            SaveBase();
-            pause = true;
-        }
-
-        public void Resume()
-        {
-            EventFromMyClass(this, new MyEventMessage($"...Продолжаю..."));
-            pause = false;
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Поставлено на паузу."));
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:Комментинг:{CountComment}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Пауза"));
+            Save();
+            if (timer != null)
+                timer.Dispose();
+            ew.Reset();
         }
 
         public void Stop()
         {
-            EventFromMyClass(this, new MyEventMessage($"..Останавливаю\n..."));
-            cancel = true;
+            Save();
+            Stat = false;
+            Stat = false;
+            Save();
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Остановлено."));
+            if (_source != null)
+            {
+                using (_source)
+                {
+                    _source.Cancel();
+                }
+                _source = null;
+            }
         }
 
-        void SaveBase()
+        public string Info()
         {
-            string[] x = new string[usersIDcopy.Count];
-            for (int i = 0; i < x.Length; i++)
+            return "МассКоммент";
+        }
+
+        void Delay()
+        {
+            int randomDelay = rnd.Next(setting.DelayMin, setting.DelayMax + 1);
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Задержка на {randomDelay} сек"));
+            timer = new Timer(CancelDelay, null, 1000 * randomDelay, Timeout.Infinite);
+            ew.Reset();
+            ew.WaitOne();
+        }
+
+        void CancelDelay(object obj)
+        {
+            ew.Set();
+        }
+
+        void Save()
+        {
+            if (setting.ChekedDeleteBase)
             {
-                x[i] = Convert.ToString(usersID[i]);
+                string[] x = new string[usersIDcopy.Count];
+                for (int i = 0; i < x.Length; i++)
+                {
+                    x[i] = Convert.ToString(usersID[i]);
+                }
+                System.IO.File.WriteAllLines(setting.FileNameBaseId, x);
             }
-            System.IO.File.WriteAllLines(setting.FileNameBaseId, x);
+        }
+
+        static string UpdateInfoUser(IResult<InstaUserInfo> userInfo)
+        {
+            string subscriptions = Convert.ToString(userInfo.Value.FollowingCount);
+            string subscribers = Convert.ToString(userInfo.Value.FollowerCount);
+            string publish = Convert.ToString(userInfo.Value.MediaCount);
+
+            return subscriptions + ":" + subscribers + ":" + publish;
         }
     }
 }

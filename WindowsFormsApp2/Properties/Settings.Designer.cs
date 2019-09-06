@@ -46,5 +46,65 @@ namespace WindowsFormsApp2.Properties {
                 this["Password"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string proxy {
+            get {
+                return ((string)(this["proxy"]));
+            }
+            set {
+                this["proxy"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string proxyLogin {
+            get {
+                return ((string)(this["proxyLogin"]));
+            }
+            set {
+                this["proxyLogin"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string proxyPassword {
+            get {
+                return ((string)(this["proxyPassword"]));
+            }
+            set {
+                this["proxyPassword"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool memberProxy {
+            get {
+                return ((bool)(this["memberProxy"]));
+            }
+            set {
+                this["memberProxy"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool member {
+            get {
+                return ((bool)(this["member"]));
+            }
+            set {
+                this["member"] = value;
+            }
+        }
     }
 }

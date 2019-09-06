@@ -25,5 +25,10 @@ namespace InstaBot.SettingsTask
 
         public bool ChekedDeleteInBaseAfterLike { get; set; } = false;
         public bool ChekedSkipSubscriber { get; set; } = false;
+
+        public int CountPublishComment { get; set; }
+        public int CountCommnetUnderPublish { get; set; }
+
+        public string[] Message { get; set; }
     }
 }

@@ -1,139 +1,227 @@
-﻿using InstaBot.SettingsTask;
+﻿using InstaBot;
+using InstaBot.SettingsTask;
+using InstaSharper.API;
 using InstaSharper.Classes;
 using InstaSharper.Classes.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
-namespace InstaBot.Task
+namespace WindowsFormsApp2.Task
 {
-    class TaskMassDirect
+    class TaskMassDirect:ITask
     {
-        InstaSharper.API.IInstaApi api;
-        SettingTaskMassDirect setting;
+        static public event EventHandler<MyEventMessage> EventFromMyClass;
+        static public event EventHandler<UpdateGridEvent> EventUpdateGrid;
 
-        List<long> usersID;
-        List<long> usersIDcopy;
-        Random rnd;
+        private CancellationTokenSource _source;
+        private Timer timer;
 
-        bool pause;
-        bool cancel;
+        private IInstaApi api;
+        private SettingTaskMassDirect setting;
+        private ManualResetEvent ew;
+        private List<long> usersID;
+        private List<long> usersIDcopy;
+        private Random rnd;
+        private int CountMessage;
+        private int CountPause;
+        private IResult<InstaCurrentUser> userInfoLog;
 
-        public int CountMessage { get; private set; }
+        public bool Stat { get; private set; } = false;
 
-        public event EventHandler<MyEventMessage> EventFromMyClass;
-
-
-        public TaskMassDirect(InstaSharper.API.IInstaApi api, SettingTaskMassDirect setting)
+        public TaskMassDirect(IInstaApi api, SettingTaskMassDirect setting)
         {
             this.api = api;
             this.setting = setting;
-            usersID = new List<long>();
-            usersIDcopy = new List<long>();
-            CountMessage = 0;
-            rnd = new Random();
-            pause = false;
-            cancel = false;
+            ew = new ManualResetEvent(true);
         }
 
         public void Start()
         {
-            EventFromMyClass(this, new MyEventMessage("Рассылка сообщений запущена\n"));
+            if (_source == null)
+            {
+                _source = new CancellationTokenSource();
+                rnd = new Random();
+                CountMessage = 0;
+                CountPause = 0;
+                usersID = new List<long>();
+                usersIDcopy = new List<long>();
+                try
+                {
+                    ThreadPool.QueueUserWorkItem((s) => { MassDirect().GetAwaiter().GetResult(); });
+                }
+                catch
+                {
+                    EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}: - : - : - :" +
+                                                              $"Забанен"));
+                }
+            }
+            else
+            {
+                EventFromMyClass(this,
+                    new MyEventMessage(
+                        $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Продолжаю работу."));
+                ew.Set();
+            }
+        }
+
+
+        async System.Threading.Tasks.Task MassDirect()
+        {
+            Stat = true;
+            userInfoLog = await api.GetCurrentUserAsync();
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Рассылка сообщений запущена"));
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Загружаю базу."));
             try
             {
                 string[] stringID = System.IO.File.ReadAllLines(setting.FileNameBaseId);
                 foreach (string str in stringID)
                 {
-                    usersID.Add(Convert.ToInt64(str));
-                    usersIDcopy.Add(Convert.ToInt64(str));
+                    try
+                    {
+                        usersID.Add(Convert.ToInt64(str));
+                        usersIDcopy.Add(Convert.ToInt64(str));
+                    }
+                    catch
+                    {
+                        continue;
+                    }
                 }
             }
             catch (Exception e)
             {
-                EventFromMyClass(this, new MyEventMessage($"ОШИБКА: {e.Message} {e.TargetSite} {DateTime.Now}\n"));
+                EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}] ОШИБКА: {e.Message}"));
             }
-            MassDirect();
-        }
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Выполняется"));
 
-        public async void MassDirect()
-        {
             foreach (long id in usersID)
             {
                 try
                 {
-                    if (cancel)
-                        return;
-
-                    while (pause)
-                    {
-                        Thread.Sleep(1000);
-                    }
+                    if (_source == null || _source.IsCancellationRequested)
+                        break;
 
                     int random = rnd.Next(0, setting.Messages.Count);
                     var x = await api.SendDirectMessage(id.ToString(), null, setting.Messages[random]);
                     CountMessage++;
-                    EventFromMyClass(this, new MyEventMessage($"{DateTime.Now.ToString("HH:mm:ss")}, отправил сообщение пользователю {(await api.GetUserInfoByIdAsync(id)).Value.Username}, количество сообщений: {CountMessage}"));
-
-                    if(setting.ChekedDeleteBase)
+                    CountPause++;
+                    EventFromMyClass(this,
+                        new MyEventMessage(
+                            $"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Oтправил сообщение пользователю {(await api.GetUserInfoByIdAsync(id)).Value.Username}. Kоличество сообщений: {CountMessage}"));
+                    EventUpdateGrid(this, new UpdateGridEvent(
+                        $"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                        $"Выполняется"));
+                    if (setting.ChekedDeleteBase)
                     {
                         usersIDcopy.Remove(id);
                     }
-
-                    Delay(); //Задержка в сек.
+                    Delay();
 
                     if (setting.CheckedPause) //Учет паузы
                     {
-                        if (setting.PauseLimit <= CountMessage)
+                        if (setting.PauseLimit <= CountPause)
                         {
-                            EventFromMyClass(this, new MyEventMessage("Пауза на " + setting.PauseTime + "минут"));
-                            Thread.Sleep(1000 * setting.PauseTime);
+                            CountPause = 0;
+                            EventFromMyClass(this,
+                                new MyEventMessage(
+                                    $"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Пауза на " +
+                                    setting.PauseTime + " минут"));
+                            EventUpdateGrid(this, new UpdateGridEvent(
+                                $"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                $"Пауза"));
+                            if (timer != null)
+                                timer.Dispose();
+                            timer = new Timer(CancelDelay, null, 60000 * setting.PauseTime, Timeout.Infinite);
+                            ew.Reset();
+                            ew.WaitOne();
                         }
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
-                    EventFromMyClass(this, new MyEventMessage($"ОШИБКА: {e.Message} {e.TargetSite} {DateTime.Now}\n"));
+                    EventFromMyClass(this,
+                        new MyEventMessage(
+                            $"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] ОШИБКА: {e.Message}"));
                 }
             }
-            EventFromMyClass(this, new MyEventMessage("Выполнено"));
-        }
 
-        void Delay()
-        {
-            int randomDelay = rnd.Next(setting.DelayMin, setting.DelayMax + 1);
-            EventFromMyClass(this, new MyEventMessage($"Задержка на {randomDelay} сек"));
-            Thread.Sleep(1000 * randomDelay);
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Выполнено"));
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Завершено"));
+            Stat = false;
+            Save();
         }
-
-        public void Pause()
+        public async void Pause()
         {
-            EventFromMyClass(this, new MyEventMessage($"...Ставлю на паузу..."));
-            SaveBase();
-            pause = true;
-        }
-
-        public void Resume()
-        {
-            EventFromMyClass(this, new MyEventMessage($"...Продолжаю..."));
-            pause = false;
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Поставлено на паузу."));
+            EventUpdateGrid(this, new UpdateGridEvent($"{userInfoLog.Value.UserName}:МассДирект:{CountMessage}/{usersID.Count}:{UpdateInfoUser(await api.GetUserInfoByIdAsync(userInfoLog.Value.Pk))}:" +
+                                                      $"Пауза"));
+            Save();
+            if (timer != null)
+                timer.Dispose();
+            ew.Reset();
         }
 
         public void Stop()
         {
-            EventFromMyClass(this, new MyEventMessage($"...Останавливаю..."));
-            cancel = true;
-        }
-        void SaveBase()
-        {
-            string[] x = new string[usersIDcopy.Count];
-            for (int i = 0; i < x.Length; i++)
+            Stat = false;
+            Save();
+            EventFromMyClass(this,
+                new MyEventMessage(
+                    $"[{userInfoLog.Value.UserName}][{DateTime.Now:HH:mm:ss}][{Info()}] Остановлено."));
+            if (_source != null)
             {
-                x[i] = Convert.ToString(usersID[i]);
+                using (_source)
+                {
+                    _source.Cancel();
+                }
+                _source = null;
             }
-            System.IO.File.WriteAllLines(setting.FileNameBaseId, x);
+        }
+
+        public string Info()
+        {
+            return "МассДирект";
+        }
+        async void Delay()
+        {
+            int randomDelay = rnd.Next(setting.DelayMin, setting.DelayMax + 1);
+            EventFromMyClass(this, new MyEventMessage($"[{userInfoLog.Value.UserName}][{DateTime.Now.ToString("HH:mm:ss")}][{Info()}] Задержка на {randomDelay} сек"));
+            timer = new Timer(CancelDelay, null, 1000 * randomDelay, Timeout.Infinite);
+            ew.Reset();
+            ew.WaitOne();
+        }
+
+        void CancelDelay(object obj)
+        {
+            ew.Set();
+        }
+
+        void Save()
+        {
+            if (setting.ChekedDeleteBase)
+            {
+                string[] x = new string[usersIDcopy.Count];
+                for (int i = 0; i < x.Length; i++)
+                {
+                    x[i] = Convert.ToString(usersID[i]);
+                }
+                System.IO.File.WriteAllLines(setting.FileNameBaseId, x);
+            }
+        }
+
+        static string UpdateInfoUser(IResult<InstaUserInfo> userInfo)
+        {
+            string subscriptions = Convert.ToString(userInfo.Value.FollowingCount);
+            string subscribers = Convert.ToString(userInfo.Value.FollowerCount);
+            string publish = Convert.ToString(userInfo.Value.MediaCount);
+
+            return subscriptions + ":" + subscribers + ":" + publish;
         }
 
     }
